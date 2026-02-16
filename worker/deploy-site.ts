@@ -78,6 +78,34 @@ async function main() {
   process.chdir(__dirname)
   exec('wrangler deploy')
 
+  // Purge Cloudflare cache for index.html
+  log('\nStep 3: Purging cache...')
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN
+  if (accountId && apiToken) {
+    try {
+      // Get zone ID for commit451.com
+      const zonesRaw = exec(
+        `curl -s -X GET "https://api.cloudflare.com/client/v4/zones?name=commit451.com" ` +
+        `-H "Authorization: Bearer ${apiToken}" -H "Content-Type: application/json"`
+      )
+      const zones = JSON.parse(zonesRaw)
+      if (zones.result?.[0]?.id) {
+        const zoneId = zones.result[0].id
+        exec(
+          `curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${zoneId}/purge_cache" ` +
+          `-H "Authorization: Bearer ${apiToken}" -H "Content-Type: application/json" ` +
+          `-d '{"files":["https://castdrop.commit451.com/","https://castdrop.commit451.com/index.html"]}'`
+        )
+        log('Cache purged for index.html')
+      } else {
+        log('Warning: Could not find zone ID, skipping cache purge')
+      }
+    } catch {
+      log('Warning: Cache purge failed (non-fatal)')
+    }
+  }
+
   log('\n=== Deployment Complete ===')
 }
 

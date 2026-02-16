@@ -261,8 +261,9 @@ async function serveSiteFile(env: Env, path: string): Promise<Response> {
     headers: {
       'Content-Type': getContentType(key),
       'Cache-Control': key === 'index.html'
-        ? 'no-cache'
+        ? 'no-store, no-cache, must-revalidate'
         : 'public, max-age=31536000, immutable',
+      ...(key === 'index.html' ? { 'CDN-Cache-Control': 'no-store' } : {}),
     },
   })
 }
