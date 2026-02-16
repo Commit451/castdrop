@@ -35,22 +35,7 @@
   height: 100%;
   background: #4a9eff;
   border-radius: 3px;
-  transition: width 0.2s;
-}
-
-.progress-bar.indeterminate::after {
-  content: '';
-  display: block;
-  height: 100%;
-  width: 40%;
-  background: #4a9eff;
-  border-radius: 3px;
-  animation: indeterminate 1.5s ease-in-out infinite;
-}
-
-@keyframes indeterminate {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(350%); }
+  transition: width 0.3s ease;
 }
 
 .progress-text {

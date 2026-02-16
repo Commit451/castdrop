@@ -3,10 +3,11 @@ interface Env {
 }
 
 const MAX_FILE_SIZE = 1 * 1024 * 1024 * 1024 // 1GB
+const CHUNK_SIZE = 80 * 1024 * 1024 // 80MB - must match frontend
 const MAX_AGE_MS = 60 * 60 * 1000 // 1 hour
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, X-Filename, Range',
   'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges',
 }
@@ -16,14 +17,25 @@ export default {
     const url = new URL(request.url)
     const path = url.pathname
 
-    // CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: CORS_HEADERS })
     }
 
-    // Upload video
-    if (path === '/upload' && request.method === 'POST') {
-      return handleUpload(request, env, url)
+    // Initialize chunked upload
+    if (path === '/upload/init' && request.method === 'POST') {
+      return handleUploadInit(request)
+    }
+
+    // Upload a chunk
+    const chunkMatch = path.match(/^\/upload\/([a-f0-9-]+)\/chunk\/(\d+)$/)
+    if (chunkMatch && request.method === 'PUT') {
+      return handleChunkUpload(request, env, chunkMatch[1], parseInt(chunkMatch[2]))
+    }
+
+    // Finalize upload
+    const finalizeMatch = path.match(/^\/upload\/([a-f0-9-]+)\/finalize$/)
+    if (finalizeMatch && request.method === 'POST') {
+      return handleFinalize(env, finalizeMatch[1], url)
     }
 
     // Serve or delete video
@@ -31,30 +43,42 @@ export default {
     if (videoMatch) {
       const id = videoMatch[1]
 
-      // sendBeacon DELETE workaround (beacons are POST with query param)
       if (request.method === 'POST' && url.searchParams.get('_method') === 'DELETE') {
         return handleDelete(id, env)
       }
-
       if (request.method === 'GET' || request.method === 'HEAD') {
         return handleServe(request, id, env)
       }
-
       if (request.method === 'DELETE') {
         return handleDelete(id, env)
       }
     }
 
-    // Serve site files (SPA)
     return serveSiteFile(env, path)
   },
 
-  // Scheduled cleanup of expired videos
   async scheduled(_event: ScheduledEvent, env: Env): Promise<void> {
     const cutoff = Date.now() - MAX_AGE_MS
-    const listed = await env.BUCKET.list({ prefix: 'videos/' })
 
-    for (const object of listed.objects) {
+    // Clean up completed videos
+    const videos = await env.BUCKET.list({ prefix: 'videos/' })
+    for (const object of videos.objects) {
+      if (object.uploaded.getTime() < cutoff) {
+        await env.BUCKET.delete(object.key)
+      }
+    }
+
+    // Clean up stale chunks
+    const chunks = await env.BUCKET.list({ prefix: 'chunks/' })
+    for (const object of chunks.objects) {
+      if (object.uploaded.getTime() < cutoff) {
+        await env.BUCKET.delete(object.key)
+      }
+    }
+
+    // Clean up stale metadata
+    const meta = await env.BUCKET.list({ prefix: 'meta/' })
+    for (const object of meta.objects) {
       if (object.uploaded.getTime() < cutoff) {
         await env.BUCKET.delete(object.key)
       }
@@ -62,35 +86,106 @@ export default {
   },
 }
 
-async function handleUpload(request: Request, env: Env, url: URL): Promise<Response> {
-  const contentLength = parseInt(request.headers.get('Content-Length') || '0')
-  if (contentLength > MAX_FILE_SIZE) {
-    return json({ error: 'File too large (max 500MB)' }, 413)
+// --- Chunked Upload ---
+
+function handleUploadInit(request: Request): Response {
+  const contentType = request.headers.get('Content-Type')
+  if (contentType !== 'application/json') {
+    return json({ error: 'Expected JSON' }, 400)
   }
 
+  return request.json<{ size: number; contentType: string; filename: string }>().then((body) => {
+    if (body.size > MAX_FILE_SIZE) {
+      return json({ error: `File too large (max ${Math.round(MAX_FILE_SIZE / (1024 * 1024))}MB)` }, 413)
+    }
+
+    const id = crypto.randomUUID()
+    const totalChunks = Math.ceil(body.size / CHUNK_SIZE)
+
+    return json({ id, totalChunks }, 200)
+  })
+}
+
+async function handleChunkUpload(
+  request: Request,
+  env: Env,
+  id: string,
+  chunkIndex: number
+): Promise<Response> {
   if (!request.body) {
-    return json({ error: 'No file provided' }, 400)
+    return json({ error: 'No data' }, 400)
   }
 
-  const contentType = request.headers.get('Content-Type') || 'video/mp4'
-  const id = crypto.randomUUID()
-  const key = `videos/${id}`
+  const key = `chunks/${id}/${chunkIndex}`
+  await env.BUCKET.put(key, request.body)
 
-  await env.BUCKET.put(key, request.body, {
-    httpMetadata: { contentType },
+  return json({ ok: true }, 200)
+}
+
+async function handleFinalize(env: Env, id: string, url: URL): Promise<Response> {
+  // List all chunks for this upload
+  const listed = await env.BUCKET.list({ prefix: `chunks/${id}/` })
+  const chunkKeys = listed.objects
+    .map((o) => ({ key: o.key, index: parseInt(o.key.split('/').pop()!) }))
+    .sort((a, b) => a.index - b.index)
+
+  if (chunkKeys.length === 0) {
+    return json({ error: 'No chunks found' }, 400)
+  }
+
+  // For single chunk, just rename it
+  if (chunkKeys.length === 1) {
+    const chunk = await env.BUCKET.get(chunkKeys[0].key)
+    if (!chunk) return json({ error: 'Chunk not found' }, 500)
+
+    const videoKey = `videos/${id}`
+    await env.BUCKET.put(videoKey, chunk.body, {
+      httpMetadata: { contentType: 'video/mp4' },
+      customMetadata: { uploadedAt: Date.now().toString() },
+    })
+    await env.BUCKET.delete(chunkKeys[0].key)
+
+    return json({ id, url: `${url.origin}/video/${id}` }, 200)
+  }
+
+  // For multiple chunks, concatenate using R2 multipart upload
+  const videoKey = `videos/${id}`
+  const multipart = await env.BUCKET.createMultipartUpload(videoKey, {
+    httpMetadata: { contentType: 'video/mp4' },
     customMetadata: { uploadedAt: Date.now().toString() },
   })
 
-  const videoUrl = `${url.origin}/video/${id}`
+  try {
+    const parts: R2UploadedPart[] = []
 
-  return json({ id, url: videoUrl }, 201)
+    for (let i = 0; i < chunkKeys.length; i++) {
+      const chunk = await env.BUCKET.get(chunkKeys[i].key)
+      if (!chunk) throw new Error(`Missing chunk ${i}`)
+
+      const part = await multipart.uploadPart(i + 1, chunk.body)
+      parts.push(part)
+    }
+
+    await multipart.complete(parts)
+
+    // Clean up chunks
+    for (const chunk of chunkKeys) {
+      await env.BUCKET.delete(chunk.key)
+    }
+
+    return json({ id, url: `${url.origin}/video/${id}` }, 200)
+  } catch (e) {
+    await multipart.abort()
+    return json({ error: 'Failed to assemble video' }, 500)
+  }
 }
+
+// --- Video Serving ---
 
 async function handleServe(request: Request, id: string, env: Env): Promise<Response> {
   const key = `videos/${id}`
   const rangeHeader = request.headers.get('Range')
 
-  // Use get with onlyIf for range requests
   const options: R2GetOptions = {}
   if (rangeHeader) {
     const match = rangeHeader.match(/bytes=(\d+)-(\d*)/)
@@ -104,7 +199,6 @@ async function handleServe(request: Request, id: string, env: Env): Promise<Resp
   }
 
   const object = await env.BUCKET.get(key, options)
-
   if (!object) {
     return json({ error: 'Not found' }, 404)
   }
@@ -123,31 +217,37 @@ async function handleServe(request: Request, id: string, env: Env): Promise<Resp
     headers['Content-Range'] = `bytes ${start}-${end}/${object.size}`
     headers['Content-Length'] = range.length.toString()
 
-    if (request.method === 'HEAD') {
-      return new Response(null, { status: 206, headers })
-    }
-    return new Response(object.body, { status: 206, headers })
+    return request.method === 'HEAD'
+      ? new Response(null, { status: 206, headers })
+      : new Response(object.body, { status: 206, headers })
   }
 
   headers['Content-Length'] = object.size.toString()
 
-  if (request.method === 'HEAD') {
-    return new Response(null, { status: 200, headers })
-  }
-  return new Response(object.body, { status: 200, headers })
+  return request.method === 'HEAD'
+    ? new Response(null, { status: 200, headers })
+    : new Response(object.body, { status: 200, headers })
 }
 
 async function handleDelete(id: string, env: Env): Promise<Response> {
+  // Delete video
   await env.BUCKET.delete(`videos/${id}`)
+
+  // Also clean up any leftover chunks
+  const chunks = await env.BUCKET.list({ prefix: `chunks/${id}/` })
+  for (const obj of chunks.objects) {
+    await env.BUCKET.delete(obj.key)
+  }
+
   return json({ ok: true }, 200)
 }
 
+// --- Site Serving ---
+
 async function serveSiteFile(env: Env, path: string): Promise<Response> {
   let key = path === '/' ? 'index.html' : path.slice(1)
-
   let file = await env.BUCKET.get(key)
 
-  // SPA fallback
   if (!file) {
     key = 'index.html'
     file = await env.BUCKET.get(key)
@@ -170,10 +270,7 @@ async function serveSiteFile(env: Env, path: string): Promise<Response> {
 function json(data: unknown, status: number): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: {
-      'Content-Type': 'application/json',
-      ...CORS_HEADERS,
-    },
+    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
   })
 }
 
