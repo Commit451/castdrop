@@ -9,34 +9,30 @@ export async function uploadVideo(
   file: File,
   onProgress: (progress: number) => void
 ): Promise<UploadResult> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest()
-    xhr.open('POST', `${WORKER_URL}/upload`)
+  // Start with indeterminate progress since Cloudflare buffers uploads
+  onProgress(-1)
 
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) {
-        onProgress(Math.round((e.loaded / e.total) * 100))
-      }
-    }
-
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          resolve(JSON.parse(xhr.responseText))
-        } catch {
-          reject(new Error('Invalid server response'))
-        }
-      } else {
-        reject(new Error(`Upload failed (${xhr.status})`))
-      }
-    }
-
-    xhr.onerror = () => reject(new Error('Network error during upload'))
-
-    xhr.setRequestHeader('Content-Type', file.type || 'video/mp4')
-    xhr.setRequestHeader('X-Filename', encodeURIComponent(file.name))
-    xhr.send(file)
+  const response = await fetch(`${WORKER_URL}/upload`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': file.type || 'video/mp4',
+      'X-Filename': encodeURIComponent(file.name),
+    },
+    body: file,
   })
+
+  if (!response.ok) {
+    const text = await response.text()
+    let message = `Upload failed (${response.status})`
+    try {
+      const json = JSON.parse(text)
+      if (json.error) message = json.error
+    } catch { /* ignore */ }
+    throw new Error(message)
+  }
+
+  onProgress(100)
+  return response.json()
 }
 
 export async function deleteVideo(id: string): Promise<void> {
