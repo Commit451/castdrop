@@ -161,7 +161,7 @@ async function serveSiteFile(env: Env, path: string): Promise<Response> {
     headers: {
       'Content-Type': getContentType(key),
       'Cache-Control': key === 'index.html'
-        ? 'public, max-age=300'
+        ? 'no-cache'
         : 'public, max-age=31536000, immutable',
     },
   })
