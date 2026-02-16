@@ -66,7 +66,7 @@ export default function App() {
   return (
     <div className="app">
       <h1>📺 CastDrop</h1>
-      <p className="subtitle">Drop a video. Cast it to your TV.</p>
+      <p className="subtitle">Drop a video. Cast it to your TV (10GB max)</p>
 
       {state.phase === 'idle' && (
         <DropZone onFile={handleFile} />

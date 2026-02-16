@@ -1,4 +1,4 @@
-# 📺 CastDrop
+# castdrop
 
 Drop a video. Cast it to your TV.
 
@@ -10,6 +10,8 @@ Upload a local video file, get a temporary streaming URL, and cast it to your Ch
 2. File uploads to Cloudflare R2 (temporary storage)
 3. Cast the video to your Chromecast using Chrome's built-in Cast or the Cast button
 4. Video is deleted when you leave the page (or after 1 hour max)
+
+Note: 10GB limit to prevent abuse. The idea is for smaller videos. Otherwise, use YouTube. 
 
 ## Tech Stack
 
@@ -34,4 +36,4 @@ Push to `main` to trigger automatic deployment.
 
 ## License
 
-MIT
+castdrop is available under the MIT license. See the LICENSE file for more info.
