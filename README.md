@@ -27,8 +27,8 @@ npm run dev
 ## Deployment
 
 Set these GitHub repository secrets:
-- `CLOUDFLARE_ACCOUNT_ID`
-- `CLOUDFLARE_API_KEY`
+- `CLOUDFLARE_ACCOUNT`
+- `CLOUDFLARE_KEY`
 
 Push to `main` to trigger automatic deployment.
 
