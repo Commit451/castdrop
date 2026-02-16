@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { DropZone } from './components/DropZone'
 import { Player } from './components/Player'
-import { UploadProgress } from './components/UploadProgress'
+import { UploadProgress, FinalizingProgress } from './components/UploadProgress'
 import { uploadVideo, deleteVideo } from './api'
 import { MAX_FILE_SIZE } from './config'
 import './App.css'
@@ -9,6 +9,7 @@ import './App.css'
 type AppState =
   | { phase: 'idle' }
   | { phase: 'uploading'; file: File; progress: number }
+  | { phase: 'finalizing'; file: File }
   | { phase: 'ready'; file: File; videoUrl: string; videoId: string }
   | { phase: 'error'; message: string }
 
@@ -45,8 +46,13 @@ export default function App() {
     setState({ phase: 'uploading', file, progress: 0 })
 
     try {
-      const result = await uploadVideo(file, (progress) => {
-        setState(prev => prev.phase === 'uploading' ? { ...prev, progress } : prev)
+      const result = await uploadVideo(file, {
+        onProgress: (progress) => {
+          setState(prev => prev.phase === 'uploading' ? { ...prev, progress } : prev)
+        },
+        onFinalizing: () => {
+          setState(prev => prev.phase === 'uploading' ? { phase: 'finalizing', file: prev.file } : prev)
+        },
       })
       videoIdRef.current = result.id
       setState({ phase: 'ready', file, videoUrl: result.url, videoId: result.id })
@@ -74,6 +80,10 @@ export default function App() {
 
       {state.phase === 'uploading' && (
         <UploadProgress filename={state.file.name} progress={state.progress} />
+      )}
+
+      {state.phase === 'finalizing' && (
+        <FinalizingProgress filename={state.file.name} />
       )}
 
       {state.phase === 'ready' && (

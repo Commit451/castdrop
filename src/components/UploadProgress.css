@@ -38,8 +38,28 @@
   transition: width 0.3s ease;
 }
 
+.progress-bar.indeterminate::after {
+  content: '';
+  display: block;
+  height: 100%;
+  width: 40%;
+  background: #4a9eff;
+  border-radius: 3px;
+  animation: indeterminate 1.5s ease-in-out infinite;
+}
+
+@keyframes indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
 .progress-text {
   color: #4a9eff;
   font-size: 0.9rem;
   font-weight: 600;
+}
+
+.finalizing-text {
+  color: #888;
+  font-weight: 400;
 }

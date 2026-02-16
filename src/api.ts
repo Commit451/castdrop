@@ -6,9 +6,14 @@ interface UploadResult {
   url: string
 }
 
+interface UploadCallbacks {
+  onProgress: (progress: number) => void
+  onFinalizing: () => void
+}
+
 export async function uploadVideo(
   file: File,
-  onProgress: (progress: number) => void
+  callbacks: UploadCallbacks
 ): Promise<UploadResult> {
   // Step 1: Initialize upload
   const initRes = await fetch(`${WORKER_URL}/upload/init`, {
@@ -44,10 +49,12 @@ export async function uploadVideo(
       throw new Error(`Chunk ${i + 1}/${totalChunks} failed (${res.status})`)
     }
 
-    onProgress(Math.round(((i + 1) / totalChunks) * 100))
+    callbacks.onProgress(Math.round(((i + 1) / totalChunks) * 100))
   }
 
   // Step 3: Finalize
+  callbacks.onFinalizing()
+
   const finalRes = await fetch(`${WORKER_URL}/upload/${id}/finalize`, {
     method: 'POST',
   })
