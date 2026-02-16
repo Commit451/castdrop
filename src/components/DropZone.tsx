@@ -34,6 +34,7 @@ export function DropZone({ onFile }: DropZoneProps) {
       <div className="drop-icon">🎬</div>
       <div className="drop-text">Drag & drop a video here</div>
       <div className="drop-hint">or click to browse</div>
+      <div className="drop-format-hint">MP4 recommended for best casting compatibility</div>
       <input
         ref={inputRef}
         type="file"

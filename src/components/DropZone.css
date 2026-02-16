@@ -36,6 +36,12 @@
   margin-top: 0.5rem;
 }
 
+.drop-format-hint {
+  color: #444;
+  font-size: 0.7rem;
+  margin-top: 0.75rem;
+}
+
 .drop-zone input {
   display: none;
 }
