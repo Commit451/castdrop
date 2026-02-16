@@ -68,7 +68,8 @@ async function main() {
     exec(
       `wrangler r2 object put ${escapeShellArg(CONFIG.bucketName + '/' + key)} ` +
       `--file=${escapeShellArg(file)} ` +
-      `--content-type=${escapeShellArg(contentType)}`
+      `--content-type=${escapeShellArg(contentType)} ` +
+      `--remote`
     )
   }
   log(`Uploaded ${files.length} files`)
