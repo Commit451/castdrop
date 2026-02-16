@@ -2,7 +2,7 @@ interface Env {
   BUCKET: R2Bucket
 }
 
-const MAX_FILE_SIZE = 1 * 1024 * 1024 * 1024 // 1GB
+const MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024 // 10GB
 const CHUNK_SIZE = 80 * 1024 * 1024 // 80MB - must match frontend
 const MAX_AGE_MS = 60 * 60 * 1000 // 1 hour
 const CORS_HEADERS = {
