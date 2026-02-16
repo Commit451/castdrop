@@ -1,0 +1,45 @@
+.upload-progress {
+  width: 100%;
+  padding: 2rem;
+  background: #111;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.upload-icon {
+  font-size: 2.5rem;
+}
+
+.upload-filename {
+  color: #aaa;
+  font-size: 0.85rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.progress-bar {
+  width: 100%;
+  max-width: 400px;
+  height: 6px;
+  background: #222;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #4a9eff;
+  border-radius: 3px;
+  transition: width 0.2s;
+}
+
+.progress-text {
+  color: #4a9eff;
+  font-size: 0.9rem;
+  font-weight: 600;
+}

@@ -1,0 +1,68 @@
+.player {
+  width: 100%;
+  background: #111;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.player-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #222;
+}
+
+.player-filename {
+  color: #aaa;
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  margin-right: 0.5rem;
+}
+
+.player-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.reset-btn {
+  background: none;
+  border: 1px solid #333;
+  color: #888;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reset-btn:hover {
+  border-color: #666;
+  color: #ccc;
+}
+
+.player-video {
+  width: 100%;
+  display: block;
+  max-height: 60vh;
+  background: #000;
+}
+
+.cast-hint {
+  padding: 1rem;
+  color: #666;
+  font-size: 0.8rem;
+  text-align: center;
+  border-top: 1px solid #222;
+}
+
+.cast-hint strong {
+  color: #4a9eff;
+}

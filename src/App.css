@@ -1,0 +1,42 @@
+.app {
+  width: 100%;
+  max-width: 800px;
+  padding: 2rem;
+  text-align: center;
+}
+
+h1 {
+  font-size: 2rem;
+  margin-bottom: 0.25rem;
+  color: #fff;
+}
+
+.subtitle {
+  color: #666;
+  margin-bottom: 2rem;
+  font-size: 0.9rem;
+}
+
+.error-card {
+  padding: 1.5rem;
+  background: #1a0a0a;
+  border: 1px solid #3a1515;
+  border-radius: 12px;
+  color: #ff6b6b;
+}
+
+.error-card button {
+  margin-top: 1rem;
+  background: none;
+  border: 1px solid #333;
+  color: #888;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.error-card button:hover {
+  border-color: #666;
+  color: #ccc;
+}

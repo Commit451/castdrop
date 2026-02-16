@@ -1,0 +1,41 @@
+.drop-zone {
+  width: 100%;
+  aspect-ratio: 16/9;
+  border: 2px dashed #333;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.drop-zone.dragover {
+  border-color: #4a9eff;
+  background: rgba(74, 158, 255, 0.05);
+}
+
+.drop-zone:hover {
+  border-color: #555;
+}
+
+.drop-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.drop-text {
+  color: #888;
+  font-size: 1.1rem;
+}
+
+.drop-hint {
+  color: #555;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+}
+
+.drop-zone input {
+  display: none;
+}

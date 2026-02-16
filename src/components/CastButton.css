@@ -1,0 +1,18 @@
+.cast-btn {
+  background: none;
+  border: 1px solid #333;
+  color: #4a9eff;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.cast-btn:hover {
+  border-color: #4a9eff;
+  background: rgba(74, 158, 255, 0.1);
+}
