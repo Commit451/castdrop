@@ -2,7 +2,7 @@ interface Env {
   BUCKET: R2Bucket
 }
 
-const MAX_FILE_SIZE = 500 * 1024 * 1024 // 500MB
+const MAX_FILE_SIZE = 1 * 1024 * 1024 * 1024 // 1GB
 const MAX_AGE_MS = 60 * 60 * 1000 // 1 hour
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',

@@ -3,6 +3,7 @@ import { DropZone } from './components/DropZone'
 import { Player } from './components/Player'
 import { UploadProgress } from './components/UploadProgress'
 import { uploadVideo, deleteVideo } from './api'
+import { MAX_FILE_SIZE } from './config'
 import './App.css'
 
 type AppState =
@@ -33,6 +34,12 @@ export default function App() {
     if (videoIdRef.current) {
       deleteVideo(videoIdRef.current).catch(() => {})
       videoIdRef.current = null
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      const maxMB = Math.round(MAX_FILE_SIZE / (1024 * 1024))
+      setState({ phase: 'error', message: `File too large (max ${maxMB}MB)` })
+      return
     }
 
     setState({ phase: 'uploading', file, progress: 0 })
